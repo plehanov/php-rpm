@@ -1,5 +1,5 @@
 {
-    "name": "plehanov/php-rpm-packager",
+    "name": "plehanov/php-rpm",
     "description": "RPM packager for PHP applications.",
     "license": "GPL-3.0",
     "keywords": ["rpm", "packager", "package building"],

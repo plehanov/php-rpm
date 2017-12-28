@@ -14,7 +14,7 @@ Install dependencies and autoloader
 ```
 php composer.phar install
 //or
-composer require plehanov/php-rpm-packager
+composer require plehanov/php-rpm
 ```
 
 Use it:
