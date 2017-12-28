@@ -1,6 +1,5 @@
 RPM packager (PHP)
 ==================
-[![Composer package](http://xn--e1adiijbgl.xn--p1acf/badge/wapmorgan/php-rpm-packager)](https://packagist.org/packages/wapmorgan/php-rpm-packager) [![Build Status](https://travis-ci.org/wapmorgan/php-rpm-packager.svg)](https://travis-ci.org/wapmorgan/php-rpm-packager) [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/wapmorgan/php-rpm-packager/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/wapmorgan/php-rpm-packager/?branch=master)
 
 A simple rpm packager for PHP applications.
 
@@ -23,24 +22,27 @@ Use it:
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-$spec = new \wapmorgan\rpm\Spec();
+$spec = new \pkehanov\rpm\Spec();
 $spec
-    ->setPackageName("my-package-name")
-    ->setVersion("0.1.1")
-    ->setDescription("My software description")
-    ->setSummary('simple summary')
-    ->setRelease('1')
-    ->setUrl('http://...');
-;
+    ->setProp([
+        'Name', 'my-package-name',
+        'Version' => '0.1.1',
+        'Summary' => 'simple summary',
+        'Release' => '1',
+        'URL' => 'http://...',
+    ])
+    ->setBlock([
+        'description', 'My software description',
+    ]);
 
 $packager = new \wapmorgan\rpm\Packager();
 
 $packager->setOutputPath("/path/to/out");
 $packager->setSpec($spec);
 
-$packager->mount("/path/to/source-conf", "/etc/my-sw");
-$packager->mount("/path/to/exec", "/usr/bin/my-sw");
-$packager->mount("/path/to/docs", "/usr/share/docs");
+$packager->addMount("/path/to/source-conf", "/etc/my-sw");
+$packager->addMount("/path/to/exec", "/usr/bin/my-sw");
+$packager->addMount("/path/to/docs", "/usr/share/docs");
 
 //Creates folders using mount points
 $packager->run();

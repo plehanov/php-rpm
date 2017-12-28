@@ -1,8 +1,29 @@
 <?php
-namespace wapmorgan\rpm;
+declare(strict_types=1);
 
-class Spec {
-    private $_keys = array(
+namespace plehanov\rpm;
+
+/**
+ * @property-read mixed|null Name
+ * @property-read mixed|null Version
+ * @property-read mixed|null Release
+ * @property-read mixed|null Summary
+ * @property-read mixed|null Group
+ * @property-read mixed|null License
+ * @property-read mixed|null URL
+ * @property-read mixed|null BuildRequires
+ * @property-read mixed|null BuildArch
+ * @property-read mixed|null Requires
+ * @property-read mixed|null description
+ * @property-read mixed|null prep
+ * @property-read mixed|null build
+ * @property-read mixed|null install
+ * @property-read mixed|null files
+ * @property-read mixed|null changelog
+ */
+class Spec
+{
+    private $keys = [
         'Name' => '',
         'Version' => '0.1',
         'Release' => '1',
@@ -13,120 +34,111 @@ class Spec {
         'BuildRequires' => '',
         'BuildArch' => 'noarch',
         'Requires' => '',
-    );
+    ];
 
-    private $_blocks = array(
+    private $blocks = [
         'description' => '',
         'prep' => '%autosetup',
         'build' => '',
-        'install' => '',
+        'install' => "rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n",
         'files' => '',
         'changelog' => '',
-    );
+    ];
+    private $inlineblocks = [
+        'files' => [],
+        // %defattr(<file mode>, <user>, <group>, <dir mode>)
+        'defattr' => [644, 'root', 'root', 755]
+    ];
 
-    public function setPackageName($name) {
-        $this->_keys['Name'] = $name;
+    public function __get($prop)
+    {
+        if (array_key_exists($prop, $this->keys)) {
+            return $this->keys[$prop];
+        }
+        if (array_key_exists($prop, $this->blocks)) {
+            return $this->blocks[$prop];
+        }
+
+        return null;
+    }
+
+    public function setProp($prop, $value = null)
+    {
+        if (\is_array($prop)){
+            $this->keys = array_merge($this->keys, $prop);
+        } elseif($value !== null) {
+            $this->keys[$prop] = $value;
+        }
+
         return $this;
     }
 
-    public function setVersion($version) {
-        $this->_keys['Version'] = $version;
+    public function setBlock($prop, $value = null)
+    {
+        if (\is_array($prop)){
+            $this->blocks = array_merge($this->blocks, $prop);
+        } elseif($value !== null) {
+            $this->blocks[$prop] = $value;
+        }
         return $this;
     }
 
-    public function setRelease($release) {
-        $this->_keys['Release'] = $release;
+    public function setInlineProp($block, $value)
+    {
+        $this->inlineblocks[$block] = $value;
         return $this;
     }
 
-    public function setSummary($summary) {
-        $this->_keys['Summary'] = $summary;
+    public function setDefaultAttr($fileMode, $user, $group, $dirMode)
+    {
+        $this->inlineblocks['defattr'] = [$fileMode, $user, $group, $dirMode];
         return $this;
     }
 
-    public function setGroup($group) {
-        $this->_keys['Group'] = $group;
+    public function defaultAttrFileMode(): int
+    {
+        return (int)$this->inlineblocks['defattr'][0];
+    }
+
+    public function defaultAttrUser(): string
+    {
+        return (string)$this->inlineblocks['defattr'][1];
+    }
+
+    public function defaultAttrGroup(): string
+    {
+        return (string)$this->inlineblocks['defattr'][2];
+    }
+
+    public function addPermission($file, $mode = '-', $user = '-', $group = '-')
+    {
+        $this->inlineblocks['files'][] = ['attr', "({$mode},{$user},{$group}) {$file}"];
         return $this;
     }
 
-    public function setLicense($license) {
-        $this->_keys['License'] = $license;
-        return $this;
-    }
-
-    public function setUrl($url) {
-        $this->_keys['URL'] = $url;
-        return $this;
-    }
-
-    public function setBuildRequires($buildRequires) {
-        $this->_keys['BuildRequires'] = $buildRequires;
-        return $this;
-    }
-
-    public function setBuildArch($buildArch) {
-        $this->_keys['BuildArch'] = $buildArch;
-        return $this;
-    }
-
-    public function setRequires($requires) {
-        $this->_keys['Requires'] = $requires;
-        return $this;
-    }
-
-    public function setDescription($description) {
-        $this->_blocks['description'] = $description;
-        return $this;
-    }
-
-    public function setPrep($prep) {
-        $this->_blocks['prep'] = $prep;
-        return $this;
-    }
-
-    public function setBuild($build) {
-        $this->_blocks['build'] = $build;
-        return $this;
-    }
-
-    public function setInstall($install) {
-        $this->_blocks['install'] = $install;
-        return $this;
-    }
-
-    public function setFiles($files) {
-        $this->_blocks['files'] = $files;
-        return $this;
-    }
-
-    public function setChangelog($changelog) {
-        $this->_blocks['changelog'] = $changelog;
-        return $this;
-    }
-
-    public function __get($prop) {
-        if (array_key_exists($prop, $this->_keys))
-            return $this->_keys[$prop];
-        else if (array_key_exists($prop, $this->_blocks))
-            return $this->_blocks[$prop];
-    }
-
-    public function setKey($prop, $value) {
-        $this->_keys[$prop] = $value;
-        return $this;
-    }
-
-    public function __toString() {
+    public function __toString()
+    {
         $spec = '';
-        foreach ($this->_keys as $key => $value) {
-            if ($value === '')
+        foreach ($this->keys as $key => $value) {
+            if ($value === '') {
                 continue;
-            $spec .= sprintf('%s: %s'."\n", $key, $value);
+            }
+            $spec .= sprintf('%s: %s' . "\n", $key, $value);
         }
 
-        foreach ($this->_blocks as $block => $value) {
-            $spec .= "\n".'%'.$block."\n".$value."\n";
+        foreach ($this->blocks as $block => $value) {
+            $spec .= "\n" . '%' . $block . "\n";
+            if ($block === 'files') {
+                $spec .= '%defattr(' . implode(',', $this->inlineblocks['defattr']) . ")\n";
+            }
+            $spec .= $value . "\n";
+            if (array_key_exists($block, $this->inlineblocks)) {
+                foreach ((array)$this->inlineblocks[$block] as [$k, $v]) {
+                    $spec .= "%{$k}{$v}\n";
+                }
+            }
         }
+
         return $spec;
     }
 }
