@@ -13,6 +13,8 @@ Install dependencies and autoloader
 
 ```
 php composer.phar install
+//or
+composer require plehanov/php-rpm-packager
 ```
 
 Use it:
@@ -22,7 +24,7 @@ Use it:
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-$spec = new \pkehanov\rpm\Spec();
+$spec = new \plehanov\rpm\Spec();
 $spec
     ->setProp([
         'Name', 'my-package-name',
@@ -35,7 +37,7 @@ $spec
         'description', 'My software description',
     ]);
 
-$packager = new \wapmorgan\rpm\Packager();
+$packager = new \plehanov\rpm\Packager();
 
 $packager->setOutputPath("/path/to/out");
 $packager->setSpec($spec);
