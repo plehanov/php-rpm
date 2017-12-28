@@ -3,6 +3,7 @@
     "description": "RPM packager for PHP applications.",
     "license": "GPL-3.0",
     "keywords": ["rpm", "packager", "package building"],
+    "version": "1.0.0",
     "autoload": {
         "psr-4": {
             "plehanov\\rpm\\": "src/"
