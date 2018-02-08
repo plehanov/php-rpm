@@ -1,25 +1,25 @@
 <?php
 declare(strict_types=1);
 
-namespace plehanov\rpm;
+namespace Plehanov\RPM;
 
 /**
- * @property-read mixed|null Name
- * @property-read mixed|null Version
- * @property-read mixed|null Release
- * @property-read mixed|null Summary
- * @property-read mixed|null Group
- * @property-read mixed|null License
- * @property-read mixed|null URL
- * @property-read mixed|null BuildRequires
- * @property-read mixed|null BuildArch
- * @property-read mixed|null Requires
- * @property-read mixed|null description
- * @property-read mixed|null prep
- * @property-read mixed|null build
- * @property-read mixed|null install
- * @property-read mixed|null files
- * @property-read mixed|null changelog
+ * @property mixed|null Name
+ * @property mixed|null Version
+ * @property mixed|null Release
+ * @property mixed|null Summary
+ * @property mixed|null Group
+ * @property mixed|null License
+ * @property mixed|null URL
+ * @property mixed|null BuildRequires
+ * @property mixed|null BuildArch
+ * @property mixed|null Requires
+ * @property mixed|null description
+ * @property mixed|null prep
+ * @property mixed|null build
+ * @property mixed|null install
+ * @property mixed|null files
+ * @property mixed|null changelog
  */
 class Spec
 {
@@ -44,25 +44,44 @@ class Spec
         'files' => '',
         'changelog' => '',
     ];
-    private $inlineblocks = [
+    private $inlineBlocks = [
         'files' => [],
-        // %defattr(<file mode>, <user>, <group>, <dir mode>)
         'defattr' => [644, 'root', 'root', 755]
     ];
 
-    public function __get($prop)
+    public function __get(string $name): ?string
     {
-        if (array_key_exists($prop, $this->keys)) {
-            return $this->keys[$prop];
+        if (array_key_exists($name, $this->keys)) {
+            return (string) $this->keys[$name];
         }
-        if (array_key_exists($prop, $this->blocks)) {
-            return $this->blocks[$prop];
+        if (array_key_exists($name, $this->blocks)) {
+            return (string) $this->blocks[$name];
         }
 
         return null;
     }
 
-    public function setProp($prop, $value = null)
+    public function __set(string $name, $value): void
+    {
+        if (array_key_exists($name, $this->keys)) {
+            $this->keys[$name] = $value;
+        }
+        if (array_key_exists($name, $this->blocks)) {
+            $this->blocks[$name] = $value;
+        }
+    }
+
+    public function __isset(string $name): bool
+    {
+        return array_key_exists($name, $this->keys) || array_key_exists($name, $this->blocks);
+    }
+
+    /**
+     * @param string|array  $prop - name or key-value array
+     * @param null $value
+     * @return Spec
+     */
+    public function setProp($prop, $value = null): self
     {
         if (\is_array($prop)){
             $this->keys = array_merge($this->keys, $prop);
@@ -73,50 +92,59 @@ class Spec
         return $this;
     }
 
-    public function setBlock($prop, $value = null)
+    /**
+     * @param string|array  $prop - name or key-value array
+     * @param null $value
+     * @return Spec
+     */
+    public function setBlock($prop, $value = null): self
     {
         if (\is_array($prop)){
             $this->blocks = array_merge($this->blocks, $prop);
         } elseif($value !== null) {
             $this->blocks[$prop] = $value;
         }
+
         return $this;
     }
 
-    public function setInlineProp($block, $value)
+    public function setInlineProp(string $block, $value): self
     {
-        $this->inlineblocks[$block] = $value;
+        $this->inlineBlocks[$block] = $value;
+
         return $this;
     }
 
-    public function setDefaultAttr($fileMode, $user, $group, $dirMode)
+    public function setDefAttr(int $fileMode = 644, string $user = 'root', string $group = 'root', int $dirMode = 755): self
     {
-        $this->inlineblocks['defattr'] = [$fileMode, $user, $group, $dirMode];
+        $this->inlineBlocks['defattr'] = [$fileMode, $user, $group, $dirMode];
+
         return $this;
     }
 
-    public function defaultAttrFileMode(): int
+    public function defAttrMode(): int
     {
-        return (int)$this->inlineblocks['defattr'][0];
+        return (int)$this->inlineBlocks['defattr'][0];
     }
 
-    public function defaultAttrUser(): string
+    public function defAttrUser(): string
     {
-        return (string)$this->inlineblocks['defattr'][1];
+        return (string)$this->inlineBlocks['defattr'][1];
     }
 
-    public function defaultAttrGroup(): string
+    public function defAttrGroup(): string
     {
-        return (string)$this->inlineblocks['defattr'][2];
+        return (string)$this->inlineBlocks['defattr'][2];
     }
 
-    public function addPermission($file, $mode = '-', $user = '-', $group = '-')
+    public function addPerm($file, $mode = '-', $user = '-', $group = '-'): self
     {
-        $this->inlineblocks['files'][] = ['attr', "({$mode},{$user},{$group}) {$file}"];
+        $this->inlineBlocks['files'][] = ['attr', "({$mode},{$user},{$group}) {$file}"];
+
         return $this;
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         $spec = '';
         foreach ($this->keys as $key => $value) {
@@ -125,15 +153,14 @@ class Spec
             }
             $spec .= sprintf('%s: %s' . "\n", $key, $value);
         }
-
         foreach ($this->blocks as $block => $value) {
             $spec .= "\n" . '%' . $block . "\n";
             if ($block === 'files') {
-                $spec .= '%defattr(' . implode(',', $this->inlineblocks['defattr']) . ")\n";
+                $spec .= '%defattr(' . implode(',', $this->inlineBlocks['defattr']) . ")\n";
             }
             $spec .= $value . "\n";
-            if (array_key_exists($block, $this->inlineblocks)) {
-                foreach ((array)$this->inlineblocks[$block] as [$k, $v]) {
+            if (array_key_exists($block, $this->inlineBlocks)) {
+                foreach ((array)$this->inlineBlocks[$block] as [$k, $v]) {
                     $spec .= "%{$k}{$v}\n";
                 }
             }

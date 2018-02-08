@@ -1,9 +1,0 @@
-language: php
-php:
-  - hhvm
-  - 7
-
-install:
-  - composer install
-
-script: vendor/bin/phpunit tests

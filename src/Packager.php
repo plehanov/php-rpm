@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace plehanov\rpm;
+namespace Plehanov\RPM;
 
 use DirectoryIterator;
 use PharData;
@@ -27,9 +27,10 @@ class Packager
         return $this->spec;
     }
 
-    public function setSpec(Spec $spec)
+    public function setSpec(Spec $spec): self
     {
         $this->spec = $spec;
+
         return $this;
     }
 
@@ -38,61 +39,52 @@ class Packager
         return $this->buildPath;
     }
 
-    public function getOutputPath(): string
-    {
-        return $this->outputPath;
-    }
-
-    public function setOutputPath($path)
+    public function setOutputPath(string $path): self
     {
         $this->outputPath = $path;
+
         return $this;
     }
 
-    public function addMount($sourcePath, $destinationPath)
+    public function addMount(string $sourcePath, string $destinationPath): self
     {
-        $this->mountPoints[$sourcePath] = $destinationPath;
+        $this->mountPoints[rtrim($sourcePath, DIRECTORY_SEPARATOR)] = DIRECTORY_SEPARATOR . trim($destinationPath, DIRECTORY_SEPARATOR);
+
         return $this;
     }
 
-    public function movePackage(string $destinationPath)
+    public function movePackage(string $destinationPath): bool
     {
-        return rename("{$this->buildPath}/rpmbuild/RPMS/{$this->spec->BuildArch}/{$this->spec->Name}-{$this->spec->Version}-{$this->spec->Release}.{$this->spec->BuildArch}.rpm",
-            $destinationPath);
+        return rename(
+            "{$this->buildPath}/rpmbuild/RPMS/{$this->spec->BuildArch}/{$this->spec->Name}-{$this->spec->Version}-{$this->spec->Release}.{$this->spec->BuildArch}.rpm",
+            $destinationPath
+        );
     }
 
-    public function run()
+    /**
+     * @return Packager
+     * @throws \RuntimeException
+     */
+    public function run(): self
     {
-        if (!is_dir("{$this->buildPath}/rpmbuild/SOURCES")) {
-            mkdir("{$this->buildPath}/rpmbuild/SOURCES", 0777, true);
+        if (file_exists($this->outputPath)) {
+            exec(sprintf(PHP_OS === 'Windows' ? 'rd /s /q %s' : 'rm -rf %s', escapeshellarg($this->outputPath)));
         }
-        if (!is_dir("{$this->buildPath}/rpmbuild/SPECS")) {
-            mkdir("{$this->buildPath}/rpmbuild/SPECS", 0777, true);
+        self::createDirectory($this->outputPath);
+        self::createDirectory("{$this->buildPath}/rpmbuild/SOURCES");
+        self::createDirectory("{$this->buildPath}/rpmbuild/SPECS");
+
+        foreach ($this->mountPoints as $sourcePath => $destPath) {
+            $this->pathToPath($sourcePath, $this->outputPath . $destPath);
         }
 
-        if (file_exists($this->getOutputPath())) {
-            exec(sprintf(PHP_OS === 'Windows' ? 'rd /s /q %s' : 'rm -rf %s', escapeshellarg($this->getOutputPath())));
+        $files = null;
+        foreach ($this->mountPoints as $sourcePath => $destPath) {
+            $files .= "\n" . (is_dir($sourcePath) ? $destPath . '/'
+                : "%attr({$this->spec->defAttrMode()},{$this->spec->defAttrUser()},{$this->spec->defAttrGroup()}) {$destPath}");
         }
 
-        if (!is_dir($this->getOutputPath())) {
-            mkdir($this->getOutputPath(), 0777, true);
-        }
-
-        foreach ($this->mountPoints as $path => $dest) {
-            $this->pathToPath($path, $this->getOutputPath() . DIRECTORY_SEPARATOR . $dest);
-        }
-
-        $files_section = null;
-        foreach ($this->mountPoints as $sourcePath => $destinationPath) {
-            $len = \strlen((string)$files_section);
-            if (is_dir($sourcePath)) {
-                $files_section .= ($len > 0 ? "\n" : null) . rtrim($destinationPath, '/') . '/';
-            } else {
-                $files_section .= ($len > 0 ? "\n" : null) . "%attr({$this->spec->defaultAttrFileMode()},{$this->spec->defaultAttrUser()},{$this->spec->defaultAttrGroup()}) {$destinationPath}";
-            }
-        }
-
-        $this->spec->setBlock('files', $files_section);
+        $this->spec->setBlock('files', ltrim($files, "\n"));
 
         if (file_exists("{$this->buildPath}/rpmbuild/SOURCES/{$this->spec->Name}.tar")) {
             unlink("{$this->buildPath}/rpmbuild/SOURCES/{$this->spec->Name}.tar");
@@ -111,36 +103,54 @@ class Packager
         return "rpmbuild -bb {$this->buildPath}/rpmbuild/SPECS/{$this->spec->Name}.spec";
     }
 
-    private function pathToPath($path, $dest): void
+    /**
+     * @param string $path
+     * @param string $destPath
+     * @throws \RuntimeException
+     */
+    protected function pathToPath(string $path, string $destPath): void
     {
         if (is_dir($path)) {
             $iterator = new DirectoryIterator($path);
             foreach ($iterator as $element) {
                 if (!\in_array((string)$element, ['.', '..'], true)) {
-                    $fullPath = $path . DIRECTORY_SEPARATOR . $element;
-                    if (is_dir($fullPath)) {
-                        $this->pathToPath($fullPath, $dest . DIRECTORY_SEPARATOR . $element);
+                    $sourcePath = $path . DIRECTORY_SEPARATOR . $element;
+                    if (is_dir($sourcePath)) {
+                        $this->pathToPath($sourcePath, $destPath . DIRECTORY_SEPARATOR . $element);
                     } else {
-                        $this->copy($fullPath, $dest . DIRECTORY_SEPARATOR . $element);
+                        $this->copy($sourcePath, $destPath . DIRECTORY_SEPARATOR . $element);
                     }
                 }
             }
-        } else {
-            if (is_file($path)) {
-                $this->copy($path, $dest);
-            }
+        } else if (is_file($path)) {
+            $this->copy($path, $destPath);
         }
     }
 
-    private function copy($sourcePath, $destinationPath): void
+    /**
+     * @param string $sourcePath
+     * @param string $destPath
+     * @throws \RuntimeException
+     */
+    protected function copy(string $sourcePath, string $destPath): void
     {
-        $destinationFolder = \dirname($destinationPath);
-        if (!file_exists($destinationFolder)) {
-            mkdir($destinationFolder, 0755, true);
+        $destinationFolder = \dirname($destPath);
+        self::createDirectory($destinationFolder);
+
+        copy($sourcePath, $destPath);
+        if (fileperms($sourcePath) !== fileperms($destPath)) {
+            chmod($destPath, fileperms($sourcePath));
         }
-        copy($sourcePath, $destinationPath);
-        if (fileperms($sourcePath) !== fileperms($destinationPath)) {
-            chmod($destinationPath, fileperms($sourcePath));
+    }
+
+    /**
+     * @param string $destFolder
+     * @throws \RuntimeException
+     */
+    protected static function createDirectory(string $destFolder): void
+    {
+        if (!file_exists($destFolder) && !mkdir($destFolder, 0755, true) && !is_dir($destFolder)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $destFolder));
         }
     }
 }

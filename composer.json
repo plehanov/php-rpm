@@ -7,10 +7,16 @@
     "type": "library",
     "autoload": {
         "psr-4": {
-            "plehanov\\rpm\\": "src/"
+            "Plehanov\\RPM\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
         }
     },
     "require": {
+        "php": ">=7.1.0",
         "ext-phar": "*"
     },
     "require-dev": {

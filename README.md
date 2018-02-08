@@ -24,7 +24,7 @@ Use it:
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-$spec = new \plehanov\rpm\Spec();
+$spec = new \Plehanov\RPM\Spec();
 $spec
     ->setProp([
         'Name', 'my-package-name',
@@ -33,18 +33,27 @@ $spec
         'Release' => '1',
         'URL' => 'http://...',
     ])
+    ->setProp('Version', '0.1.2')
     ->setBlock([
         'description', 'My software description',
-    ]);
+    ])
+    ->setBlock(
+            'description', 'My software description'
+    )
+    ->setBlock('files', "%{buildroot}%{bindir}/binary\n%{buildroot}%{_libdir}/%{name}/*")
+    ->setDefAttr(644, 'root', 'root', 755)
+    ->addPerm('%{buildroot}%{bindir}/binary1', 644)
+    ->addPerm('%{buildroot}%{bindir}/binary2', 644, 'apache')
+    ->addPerm('%{buildroot}%{bindir}/binary3', 644, 'apache', 'jenkins');
 
-$packager = new \plehanov\rpm\Packager();
+$packager = new \Plehanov\RPM\Packager();
 
-$packager->setOutputPath("/path/to/out");
+$packager->setOutputPath('/path/to/out');
 $packager->setSpec($spec);
 
-$packager->addMount("/path/to/source-conf", "/etc/my-sw");
-$packager->addMount("/path/to/exec", "/usr/bin/my-sw");
-$packager->addMount("/path/to/docs", "/usr/share/docs");
+$packager->addMount('/path/to/source-conf', '/etc/my-sw');
+$packager->addMount('/path/to/exec', '/usr/bin/my-sw');
+$packager->addMount('/path/to/docs', '/usr/share/docs');
 
 //Creates folders using mount points
 $packager->run();

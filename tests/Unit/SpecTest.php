@@ -1,6 +1,6 @@
 <?php
 
-use plehanov\rpm\Spec;
+use Plehanov\RPM\Spec;
 
 class SpecTest extends PHPUnit\Framework\TestCase
 {
@@ -65,8 +65,10 @@ mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_libdir}/%{name}
 cp -p binary %{buildroot}%{_bindir}/binary
 cp -p src/* %{buildroot}%{_libdir}/%{name}/')
-            ->setDefaultAttr(664, 'apache', 'apache', 775)
-            ->addPermission('%{buildroot}%{bindir}/binary', 644)
+            ->setDefAttr(664, 'apache', 'apache', 775)
+            ->addPerm('%{buildroot}%{bindir}/binary1', 644)
+            ->addPerm('%{buildroot}%{bindir}/binary2', 644,'apache')
+            ->addPerm('%{buildroot}%{bindir}/binary3', 644,'apache', 'apache')
             ->setBlock('files', '%{buildroot}%{bindir}/binary
 %{buildroot}%{_libdir}/%{name}/*')
             ->setBlock('changelog', '- 1.0.0.');
@@ -103,7 +105,9 @@ cp -p src/* %{buildroot}%{_libdir}/%{name}/
 %defattr(664,apache,apache,775)
 %{buildroot}%{bindir}/binary
 %{buildroot}%{_libdir}/%{name}/*
-%attr(644,-,-) %{buildroot}%{bindir}/binary
+%attr(644,-,-) %{buildroot}%{bindir}/binary1
+%attr(644,apache,-) %{buildroot}%{bindir}/binary2
+%attr(644,apache,apache) %{buildroot}%{bindir}/binary3
 
 %changelog
 - 1.0.0.
