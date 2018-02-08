@@ -1,6 +1,11 @@
 RPM packager (PHP)
 ==================
 
+[![Latest Stable Version](https://poser.pugx.org/plehanov/php-rpm/v/stable)](https://packagist.org/packages/plehanov/php-rpm)
+[![Total Downloads](https://poser.pugx.org/plehanov/php-rpm/downloads)](https://packagist.org/packages/plehanov/php-rpm) [![License](https://poser.pugx.org/plehanov/php-rpm/license)](https://packagist.org/packages/plehanov/php-rpm)
+[![Code Climate](https://codeclimate.com/github/plehanov/php-rpm/badges/gpa.svg)](https://codeclimate.com/github/plehanov/php-rpm)
+[![Issue Count](https://codeclimate.com/github/plehanov/php-rpm/badges/issue_count.svg)](https://codeclimate.com/github/plehanov/php-rpm)
+
 A simple rpm packager for PHP applications.
 
 Get composer:

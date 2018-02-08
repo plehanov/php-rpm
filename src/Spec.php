@@ -146,26 +146,37 @@ class Spec
 
     public function __toString(): string
     {
-        $spec = '';
+        return $this->keysToString() . $this->blocksToString();
+    }
+
+    protected function keysToString(): string
+    {
+        $result = '';
         foreach ($this->keys as $key => $value) {
             if ($value === '') {
                 continue;
             }
-            $spec .= sprintf('%s: %s' . "\n", $key, $value);
+            $result .= sprintf('%s: %s' . "\n", $key, $value);
         }
+
+        return $result;
+    }
+
+    protected function blocksToString(): string
+    {
+        $result = '';
         foreach ($this->blocks as $block => $value) {
-            $spec .= "\n" . '%' . $block . "\n";
+            $result .= "\n" . '%' . $block . "\n";
             if ($block === 'files') {
-                $spec .= '%defattr(' . implode(',', $this->inlineBlocks['defattr']) . ")\n";
+                $result .= '%defattr(' . implode(',', $this->inlineBlocks['defattr']) . ")\n";
             }
-            $spec .= $value . "\n";
+            $result .= $value . "\n";
             if (array_key_exists($block, $this->inlineBlocks)) {
                 foreach ((array)$this->inlineBlocks[$block] as [$k, $v]) {
-                    $spec .= "%{$k}{$v}\n";
+                    $result .= "%{$k}{$v}\n";
                 }
             }
         }
-
-        return $spec;
+        return $result;
     }
 }

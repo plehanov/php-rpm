@@ -122,7 +122,7 @@ class Packager
                     }
                 }
             }
-        } else if (is_file($path)) {
+        } else {
             $this->copy($path, $destPath);
         }
     }
