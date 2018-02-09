@@ -23,9 +23,6 @@ namespace Plehanov\RPM;
  */
 class Spec
 {
-    protected $destinationFolderMask = '%{destroot}';
-    protected $destinationFolder = '';
-
     private $keys = [
         'Name' => '',
         'Version' => '0.1',
@@ -85,13 +82,6 @@ class Spec
     public function __isset(string $name): bool
     {
         return array_key_exists($name, $this->keys) || array_key_exists($name, $this->blocks);
-    }
-    
-    public function setDestinationFolder(string $path): self
-    {
-        $this->destinationFolder = $path;
-
-        return $this;
     }
 
     /**
@@ -232,15 +222,6 @@ class Spec
             $result .= $isFolder ?  "%exclude %dir $element\n" : "%exclude $element\n";
         }
 
-        return $this->replaceFolderMask($result);
-    }
-
-    /**
-     * @param string $path - method remove last dash
-     * @return string
-     */
-    protected function replaceFolderMask(string $path): string
-    {
-        return str_replace($this->destinationFolderMask, rtrim($this->destinationFolder, DIRECTORY_SEPARATOR), $path);
+        return $result;
     }
 }

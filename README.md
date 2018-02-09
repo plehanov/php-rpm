@@ -53,14 +53,18 @@ $spec
     ->addPerm('/etc/package1/source', 644, 'apache')
     // Custom permission: mode, user, group    
     ->addPerm('/etc/%{destroot}/lib', 644, 'apache', 'jenkins')
-    // Path %{destroot} replace to /opt/project. Install command replace too.
-    ->setDestinationFolder('/opt/project')
+    // Replace all command
+    ->setBlock('install', [])
+    // Append one command
     ->appendInstallCommand('ln -s %{destroot}/storage/app/ %{destroot}/public/storage');
 
 $packager = new \Plehanov\RPM\Packager();
 // Build temporary folder
 $packager->setOutputPath('/path/to/out');
-$packager->setSpec($spec);
+$packager
+    ->setSpec($spec)
+    // Path %{destroot} replace to /opt/project. Install command replace too.
+    ->setDestinationFolder('/opt/project');
 
 // Copy file /path-from/source-conf to /etc/package1/source/main.conf
 $packager->addMount('/path-from/source-conf', '/etc/package1/source/main.conf');

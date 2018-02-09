@@ -77,7 +77,6 @@ Very long')
             ->addExclude('%{buildroot}/%{_libdir}/%{name}/[foo|bar]')
             ->appendInstallCommand('cp -p src/* %{buildroot}%{_libdir}/%{name}/')
             ->setBlock('changelog', '- 1.0.0.')
-            ->setDestinationFolder('/opt/project/')
         ;
         $this->assertEquals(<<<SPEC
 Name: simplepackage
@@ -113,10 +112,10 @@ cp -p src/* %{buildroot}%{_libdir}/%{name}/
 
 %files
 %defattr(664,apache,apache,775)
-%attr(644,-,-) /opt/project/%{bindir}/binary1
-%attr(644,apache,-) /opt/project/%{bindir}/binary2
-%attr(644,apache,apache) /opt/project/%{bindir}/binary3
-/opt/project/%{bindir}/binary
+%attr(644,-,-) %{destroot}/%{bindir}/binary1
+%attr(644,apache,-) %{destroot}/%{bindir}/binary2
+%attr(644,apache,apache) %{destroot}/%{bindir}/binary3
+%{destroot}/%{bindir}/binary
 %{buildroot}/%{_libdir}/%{name}/*
 %exclude %{buildroot}/%{_libdir}/%{name}/[foo|bar]
 

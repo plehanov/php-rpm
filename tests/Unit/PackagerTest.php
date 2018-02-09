@@ -43,24 +43,27 @@ class PackagerTest extends PHPUnit\Framework\TestCase
         $spec
             ->setProp('Name', 'test-c')
             ->setProp('Release', 2)
-            ->setBlock('prep', '%autosetup -c package');
+            ->setBlock('prep', '%autosetup -c package')
+            ->appendInstallCommand('echo %{destroot}');
         $packager = new Packager();
-        $packager->setSpec($spec);
-        $packager->setOutputPath('/tmp/rpm-test/output');
-        $packager->addMount('/tmp/rpm-test/package/test/binary', '/opt/test/binary');
-        $packager->addMount('/tmp/rpm-test/package/test2/', '/opt/test/lib/');
+        $packager
+            ->setSpec($spec)
+            ->setOutputPath('/tmp/rpm-test/output')
+            ->addMount('/tmp/rpm-test/package/test/binary', '%{destroot}/binary')
+            ->addMount('/tmp/rpm-test/package/test2/', '/tmp/test/lib/')
+            ->setDestinationFolder('/tmp/test/');
 
         $packager->run();
 
         $this->assertEquals('%autosetup -c package', $spec->prep);
-        $this->assertEquals(['rm -rf %{buildroot}', 'mkdir -p %{buildroot}', 'cp -rp * %{buildroot}'], $spec->install);
-        $this->assertEquals("/opt/test/binary\n/opt/test/lib\n", $spec->files);
+        $this->assertEquals(['rm -rf %{buildroot}', 'mkdir -p %{buildroot}', 'cp -rp * %{buildroot}', 'echo %{destroot}'], $spec->install);
+        $this->assertEquals("/tmp/test/binary\n/tmp/test/lib\n", $spec->files);
         $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/SPECS/test-c.spec');
         $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/SOURCES/test-c.tar');
 
         $phar = new PharData($packager->getBuildPath() . '/rpmbuild/SOURCES/test-c.tar');
-        $this->assertArrayHasKey('opt/test/binary', $phar);
-        $this->assertArrayHasKey('opt/test/lib/abc', $phar);
+        $this->assertArrayHasKey('tmp/test/binary', $phar);
+        $this->assertArrayHasKey('tmp/test/lib/abc', $phar);
 
         $command = $packager->build();
         $this->assertEquals('rpmbuild -bb ' . $packager->getBuildPath() . '/rpmbuild/SPECS/test-c.spec', $command);
@@ -71,7 +74,7 @@ class PackagerTest extends PHPUnit\Framework\TestCase
         $this->assertTrue($packager->movePackage('/tmp/rpm-test/test-c-0.1.rpm'));
         $this->assertFileExists('/tmp/rpm-test/test-c-0.1.rpm');
 
-        $expectedFiles = ['/opt/test/binary', '/opt/test/lib', '/opt/test/lib/abc'];
+        $expectedFiles = ['/tmp/test/binary', '/tmp/test/lib', '/tmp/test/lib/abc'];
         exec('rpm -qlp ' . '/tmp/rpm-test/test-c-0.1.rpm', $actualFiles, $_);
         $this->assertEquals($expectedFiles, $actualFiles);
 

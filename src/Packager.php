@@ -17,6 +17,9 @@ class Packager
     /** @var string */
     private $buildPath;
 
+    protected $destinationFolderMask = '%{destroot}';
+    protected $destinationFolder = '';
+
     public function __construct()
     {
         $this->buildPath = $_SERVER['HOME'];
@@ -48,7 +51,7 @@ class Packager
 
     public function addMount(string $sourcePath, string $destinationPath): self
     {
-        $this->mountPoints[rtrim($sourcePath, DIRECTORY_SEPARATOR)] = DIRECTORY_SEPARATOR . trim($destinationPath, DIRECTORY_SEPARATOR);
+        $this->mountPoints[rtrim($sourcePath, DIRECTORY_SEPARATOR)] =  DIRECTORY_SEPARATOR . trim($destinationPath, DIRECTORY_SEPARATOR);
 
         return $this;
     }
@@ -61,6 +64,13 @@ class Packager
         );
     }
 
+    public function setDestinationFolder(string $path): self
+    {
+        $this->destinationFolder = $path;
+
+        return $this;
+    }
+
     /**
      * @return Packager
      * @throws \RuntimeException
@@ -70,13 +80,14 @@ class Packager
         if (file_exists($this->outputPath)) {
             exec(sprintf(PHP_OS === 'Windows' ? 'rd /s /q %s' : 'rm -rf %s', escapeshellarg($this->outputPath)));
         }
-        self::createDirectory($this->outputPath);
-        self::createDirectory("{$this->buildPath}/rpmbuild/SOURCES");
-        self::createDirectory("{$this->buildPath}/rpmbuild/SPECS");
+        $this->createDirectory($this->outputPath);
+        $this->createDirectory("{$this->buildPath}/rpmbuild/SOURCES");
+        $this->createDirectory("{$this->buildPath}/rpmbuild/SPECS");
 
         foreach ($this->mountPoints as $sourcePath => $destPath) {
-            $this->pathToPath($sourcePath, $this->outputPath . $destPath);
-            $this->spec->addPerm($destPath);
+            $dest = $this->replaceFolderMask($destPath);
+            $this->pathToPath($sourcePath, $this->outputPath . $dest);
+            $this->spec->addPerm($dest);
         }
 
         if (file_exists("{$this->buildPath}/rpmbuild/SOURCES/{$this->spec->Name}.tar")) {
@@ -86,7 +97,8 @@ class Packager
         $tar->buildFromDirectory($this->outputPath);
         $this->spec->setProp('Source0', "{$this->spec->Name}.tar");
 
-        file_put_contents("{$this->buildPath}/rpmbuild/SPECS/{$this->spec->Name}.spec", (string)$this->spec);
+
+        file_put_contents("{$this->buildPath}/rpmbuild/SPECS/{$this->spec->Name}.spec", $this->replaceFolderMask((string)$this->spec));
 
         return $this;
     }
@@ -128,7 +140,7 @@ class Packager
     protected function copy(string $sourcePath, string $destPath): void
     {
         $destinationFolder = \dirname($destPath);
-        self::createDirectory($destinationFolder);
+        $this->createDirectory($destinationFolder);
 
         copy($sourcePath, $destPath);
         if (fileperms($sourcePath) !== fileperms($destPath)) {
@@ -140,10 +152,20 @@ class Packager
      * @param string $destFolder
      * @throws \RuntimeException
      */
-    protected static function createDirectory(string $destFolder): void
+    protected function createDirectory(string $destFolder): void
     {
         if (!file_exists($destFolder) && !mkdir($destFolder, 0755, true) && !is_dir($destFolder)) {
             throw new \RuntimeException(sprintf('Directory "%s" was not created', $destFolder));
         }
+    }
+
+    /**
+     * @param string $path - method remove last dash
+     * @return string
+     */
+    protected function replaceFolderMask(string $path): string
+    {
+        return str_replace([$this->destinationFolderMask, DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR],
+            [rtrim($this->destinationFolder, DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR], $path);
     }
 }
