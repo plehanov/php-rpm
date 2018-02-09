@@ -54,7 +54,7 @@ $spec
     // Custom permission: mode, user, group    
     ->addPerm('/etc/%{destroot}/lib', 644, 'apache', 'jenkins')
     // Replace all command
-    ->setBlock('install', [])
+    ->setBlock('install', ['rm -rf %{buildroot}', 'mkdir -p %{buildroot}%{_bindir}'])
     // Append one command
     ->appendInstallCommand('ln -s %{destroot}/storage/app/ %{destroot}/public/storage');
 
