@@ -51,8 +51,11 @@ $spec
     ->setDefAttr(644, 'root', 'root', 755)
     ->addPerm('/etc/package1/bin/run', 644)
     ->addPerm('/etc/package1/source', 644, 'apache')
-    // Custom permission: mode, user, group
-    ->addPerm('/etc/package1/lib', 644, 'apache', 'jenkins');
+    // Custom permission: mode, user, group    
+    ->addPerm('/etc/%{destroot}/lib', 644, 'apache', 'jenkins')
+    // Path %{destroot} replace to /opt/project. Install command replace too.
+    ->setDestinationFolder('/opt/project')
+    ->appendInstallCommand('ln -s %{destroot}/storage/app/ %{destroot}/public/storage');
 
 $packager = new \Plehanov\RPM\Packager();
 // Build temporary folder
@@ -62,11 +65,11 @@ $packager->setSpec($spec);
 // Copy file /path-from/source-conf to /etc/package1/source/main.conf
 $packager->addMount('/path-from/source-conf', '/etc/package1/source/main.conf');
 // Copy file /path-from/binary to /etc/package1/bin/run
-$packager->addMount('/path-from/binary', '/etc/package1/bin/run');
+$packager->addMount('/path-from/binary', '%{destroot}/bin/run');
 // Copy folder /path-from/library/ to /etc/package1/lib/
-$packager->addMount('/path-from/library', '/etc/package1/lib');
+$packager->addMount('/path-from/library', '%{destroot}/lib');
 // Copy folder /path-from/library2/ to /etc/package1/lib2/
-$packager->addMount('/path-from/library2/', '/etc/package1/lib2/');
+$packager->addMount('/path-from/library2/', '%{destroot}/lib2/');
 
 //Creates folders using mount points
 $packager->run();

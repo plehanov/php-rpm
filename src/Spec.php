@@ -23,6 +23,9 @@ namespace Plehanov\RPM;
  */
 class Spec
 {
+    protected $destinationFolderMask = '%{destroot}';
+    protected $destinationFolder = '';
+
     private $keys = [
         'Name' => '',
         'Version' => '0.1',
@@ -40,25 +43,27 @@ class Spec
         'description' => '',
         'prep' => '%autosetup -c package',
         'build' => '',
-        'install' => "rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n",
+        'install' => ['rm -rf %{buildroot}', 'mkdir -p %{buildroot}', 'cp -rp * %{buildroot}'],
         'changelog' => '',
     ];
     private $inlineBlocks = [
         'files' => [],
+        'exclude' => [],
         'defattr' => [644, 'root', 'root', 755]
     ];
 
-    public function __get(string $name): ?string
+    public function __get(string $name)
     {
         if (array_key_exists($name, $this->keys)) {
             return (string) $this->keys[$name];
         }
         if (array_key_exists($name, $this->blocks)) {
-            return (string) $this->blocks[$name];
+            return $this->blocks[$name];
         }
-        if ($name === 'files') {
+
+        if (\in_array($name, ['files', 'exclude'], true)) {
             $out = '';
-            foreach ((array)$this->inlineBlocks['files'] as $file) {
+            foreach ((array)$this->inlineBlocks[$name] as $file) {
                 $out .= (\is_string($file) ? $file : $file[0]) . "\n";
             }
             return $out;
@@ -81,6 +86,13 @@ class Spec
     {
         return array_key_exists($name, $this->keys) || array_key_exists($name, $this->blocks);
     }
+    
+    public function setDestinationFolder(string $path): self
+    {
+        $this->destinationFolder = $path;
+
+        return $this;
+    }
 
     /**
      * @param string|array  $prop - name or key-value array
@@ -99,8 +111,8 @@ class Spec
     }
 
     /**
-     * @param string|array  $prop - name or key-value array
-     * @param null $value
+     * @param string|array $prop - name or key-value array
+     * @param string       $value
      * @return Spec
      */
     public function setBlock($prop, $value = ''): self
@@ -117,6 +129,13 @@ class Spec
     public function setInlineProp(string $block, $value): self
     {
         $this->inlineBlocks[$block] = $value;
+
+        return $this;
+    }
+
+    public function appendInstallCommand(string $command): self
+    {
+        $this->blocks['install'] = $command;
 
         return $this;
     }
@@ -143,19 +162,37 @@ class Spec
         return (string)$this->inlineBlocks['defattr'][2];
     }
 
-    public function addPerm($file, $mode = null, $user = null, $group = null): self
+    /**
+     * @param string $entity - file or folder
+     * @param null   $mode
+     * @param null   $user
+     * @param null   $group
+     * @return Spec
+     */
+    public function addPerm(string $entity, $mode = null, $user = null, $group = null): self
     {
-        $elem = $this->inlineBlocks['files'][$file] ?? null;
+        $elem = $this->inlineBlocks['files'][$entity] ?? null;
 
-        if ($elem && \is_array($this->inlineBlocks['files'][$file])) {
+        if ($elem && \is_array($this->inlineBlocks['files'][$entity])) {
             if ($elem[1] === null && $elem[2] === null && $elem[3] === null) {
-                $this->inlineBlocks['files'][$file][0] = $file;
+                $this->inlineBlocks['files'][$entity][0] = $entity;
             }
         } elseif ($mode || $user || $group) {
-            $this->inlineBlocks['files'][$file] = [$file, $mode ?? '-', $user ?? '-', $group ?? '-'];
+            $this->inlineBlocks['files'][$entity] = [$entity, $mode ?? '-', $user ?? '-', $group ?? '-'];
         } else {
-            $this->inlineBlocks['files'][$file] = $file;
+            $this->inlineBlocks['files'][$entity] = $entity;
         }
+
+        return $this;
+    }
+
+    /**
+     * @param string $entity - /opt/myapp/[bin|data|whatever]
+     * @return Spec
+     */
+    public function addExclude(string $entity): self
+    {
+        $this->inlineBlocks['exclude'][$entity] = $entity;
 
         return $this;
     }
@@ -181,14 +218,28 @@ class Spec
     protected function blocksToString(): string
     {
         $result = '';
-        foreach ($this->blocks as $block => $value) {
-            $result .= "\n%{$block}\n{$value}\n";
+        foreach ($this->blocks as $block => $element) {
+            $result .= \is_string($element) ? "\n%{$block}\n{$element}\n" : ("\n%{$block}\n" . implode("\n", $element) . "\n");
         }
+
         $result .= "\n%files\n%defattr(" . implode(',', $this->inlineBlocks['defattr']) . ")\n";
+
         foreach ((array)$this->inlineBlocks['files'] as $element) {
             $result .= \is_string($element) ? "$element\n" : "%attr({$element[1]},{$element[2]},{$element[3]}) {$element[0]}\n";
         }
+        foreach ((array)$this->inlineBlocks['exclude'] as $element) {
+            $result .= "%exclude $element\n";
+        }
 
-        return $result;
+        return $this->replaceFolderMask($result);
+    }
+
+    /**
+     * @param string $path - method remove last dash
+     * @return string
+     */
+    protected function replaceFolderMask(string $path): string
+    {
+        return str_replace($this->destinationFolderMask, rtrim($this->destinationFolder, DIRECTORY_SEPARATOR), $path);
     }
 }

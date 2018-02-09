@@ -33,7 +33,6 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}
 cp -rp * %{buildroot}
 
-
 %changelog
 
 
@@ -71,15 +70,18 @@ mkdir -p %{buildroot}%{_libdir}/%{name}
 cp -p binary %{buildroot}%{_bindir}/binary
 cp -p src/* %{buildroot}%{_libdir}/%{name}/')
             ->setDefAttr(664, 'apache', 'apache', 775)
-            ->addPerm('%{buildroot}%{bindir}/binary1', 644)
-            ->addPerm('%{buildroot}%{bindir}/binary2')
-            ->addPerm('%{buildroot}%{bindir}/binary3', 644,'apache', 'apache')
-            ->addPerm('%{buildroot}%{bindir}/binary3')
-            ->addPerm('%{buildroot}%{bindir}/binary2', 644,'apache')
-            ->addPerm('%{buildroot}%{bindir}/binary1')
-            ->addPerm('%{buildroot}%{bindir}/binary')
-            ->addPerm('%{buildroot}%{_libdir}/%{name}/*')
-            ->setBlock('changelog', '- 1.0.0.');
+            ->addPerm('%{destroot}/%{bindir}/binary1', 644)
+            ->addPerm('%{destroot}/%{bindir}/binary2')
+            ->addPerm('%{destroot}/%{bindir}/binary3', 644,'apache', 'apache')
+            ->addPerm('%{destroot}/%{bindir}/binary3')
+            ->addPerm('%{destroot}/%{bindir}/binary2', 644,'apache')
+            ->addPerm('%{destroot}/%{bindir}/binary1')
+            ->addPerm('%{destroot}/%{bindir}/binary')
+            ->addPerm('%{buildroot}/%{_libdir}/%{name}/*')
+            ->addExclude('%{buildroot}/%{_libdir}/%{name}/[foo|bar]')
+            ->setBlock('changelog', '- 1.0.0.')
+            ->setDestinationFolder('/opt/project/')
+        ;
         $this->assertEquals(<<<SPEC
 Name: simplepackage
 Version: 1.0.0
@@ -114,11 +116,12 @@ cp -p src/* %{buildroot}%{_libdir}/%{name}/
 
 %files
 %defattr(664,apache,apache,775)
-%attr(644,-,-) %{buildroot}%{bindir}/binary1
-%attr(644,apache,-) %{buildroot}%{bindir}/binary2
-%attr(644,apache,apache) %{buildroot}%{bindir}/binary3
-%{buildroot}%{bindir}/binary
-%{buildroot}%{_libdir}/%{name}/*
+%attr(644,-,-) /opt/project/%{bindir}/binary1
+%attr(644,apache,-) /opt/project/%{bindir}/binary2
+%attr(644,apache,apache) /opt/project/%{bindir}/binary3
+/opt/project/%{bindir}/binary
+%{buildroot}/%{_libdir}/%{name}/*
+%exclude %{buildroot}/%{_libdir}/%{name}/[foo|bar]
 
 SPEC
         , (string)$spec);
