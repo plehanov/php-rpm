@@ -41,7 +41,6 @@ class Spec
         'prep' => '%autosetup -c package',
         'build' => '',
         'install' => "rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n",
-        'files' => '',
         'changelog' => '',
     ];
     private $inlineBlocks = [
@@ -56,6 +55,13 @@ class Spec
         }
         if (array_key_exists($name, $this->blocks)) {
             return (string) $this->blocks[$name];
+        }
+        if ($name === 'files') {
+            $out = '';
+            foreach ((array)$this->inlineBlocks['files'] as $file) {
+                $out .= (\is_string($file) ? $file : $file[0]) . "\n";
+            }
+            return $out;
         }
 
         return null;
@@ -137,9 +143,19 @@ class Spec
         return (string)$this->inlineBlocks['defattr'][2];
     }
 
-    public function addPerm($file, $mode = '-', $user = '-', $group = '-'): self
+    public function addPerm($file, $mode = null, $user = null, $group = null): self
     {
-        $this->inlineBlocks['files'][] = ['attr', "({$mode},{$user},{$group}) {$file}"];
+        $elem = $this->inlineBlocks['files'][$file] ?? null;
+
+        if ($elem && \is_array($this->inlineBlocks['files'][$file])) {
+            if ($elem[1] === null && $elem[2] === null && $elem[3] === null) {
+                $this->inlineBlocks['files'][$file][0] = $file;
+            }
+        } elseif ($mode || $user || $group) {
+            $this->inlineBlocks['files'][$file] = [$file, $mode ?? '-', $user ?? '-', $group ?? '-'];
+        } else {
+            $this->inlineBlocks['files'][$file] = $file;
+        }
 
         return $this;
     }
@@ -166,17 +182,13 @@ class Spec
     {
         $result = '';
         foreach ($this->blocks as $block => $value) {
-            $result .= "\n%{$block}\n";
-            if ($block === 'files') {
-                $result .= '%defattr(' . implode(',', $this->inlineBlocks['defattr']) . ")\n";
-            }
-            $result .= $value . "\n";
-            if (array_key_exists($block, $this->inlineBlocks)) {
-                foreach ((array)$this->inlineBlocks[$block] as [$k, $v]) {
-                    $result .= "%{$k}{$v}\n";
-                }
-            }
+            $result .= "\n%{$block}\n{$value}\n";
         }
+        $result .= "\n%files\n%defattr(" . implode(',', $this->inlineBlocks['defattr']) . ")\n";
+        foreach ((array)$this->inlineBlocks['files'] as $element) {
+            $result .= \is_string($element) ? "$element\n" : "%attr({$element[1]},{$element[2]},{$element[3]}) {$element[0]}\n";
+        }
+
         return $result;
     }
 }

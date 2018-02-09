@@ -76,9 +76,8 @@ class Packager
 
         foreach ($this->mountPoints as $sourcePath => $destPath) {
             $this->pathToPath($sourcePath, $this->outputPath . $destPath);
+            $this->spec->addPerm($destPath);
         }
-
-        $this->spec->setBlock('files', implode($this->mountPoints, "\n"));
 
         if (file_exists("{$this->buildPath}/rpmbuild/SOURCES/{$this->spec->Name}.tar")) {
             unlink("{$this->buildPath}/rpmbuild/SOURCES/{$this->spec->Name}.tar");

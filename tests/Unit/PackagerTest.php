@@ -40,34 +40,40 @@ class PackagerTest extends PHPUnit\Framework\TestCase
         touch('/tmp/rpm-test/package/test2/abc');
 
         $spec = new Spec();
-        $spec->setProp('Name', 'test-c')->setProp('Release', 2)->setBlock('prep', '%autosetup -c package');
+        $spec
+            ->setProp('Name', 'test-c')
+            ->setProp('Release', 2)
+            ->setBlock('prep', '%autosetup -c package');
         $packager = new Packager();
         $packager->setSpec($spec);
         $packager->setOutputPath('/tmp/rpm-test/output');
-        $packager->addMount('/tmp/rpm-test/package/test/binary', '/usr/bin/binary');
-        $packager->addMount('/tmp/rpm-test/package/test2/', '/usr/lib/test/');
+        $packager->addMount('/tmp/rpm-test/package/test/binary', '/opt/test/binary');
+        $packager->addMount('/tmp/rpm-test/package/test2/', '/opt/test/lib/');
+
         $packager->run();
 
         $this->assertEquals('%autosetup -c package', $spec->prep);
         $this->assertEquals("rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n", $spec->install);
-        $this->assertEquals("/usr/bin/binary\n/usr/lib/test", $spec->files);
-        $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SPECS/test-c.spec'));
-        $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SOURCES/test-c.tar'));
+        $this->assertEquals("/opt/test/binary\n/opt/test/lib\n", $spec->files);
+        $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/SPECS/test-c.spec');
+        $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/SOURCES/test-c.tar');
 
         $phar = new PharData($packager->getBuildPath() . '/rpmbuild/SOURCES/test-c.tar');
-        $this->assertTrue(isset($phar['usr/bin/binary']));
-        $this->assertTrue(isset($phar['usr/lib/test/abc']));
+        $this->assertArrayHasKey('opt/test/binary', $phar);
+        $this->assertArrayHasKey('opt/test/lib/abc', $phar);
 
         $command = $packager->build();
         $this->assertEquals('rpmbuild -bb ' . $packager->getBuildPath() . '/rpmbuild/SPECS/test-c.spec', $command);
         exec($command, $_, $result);
+
         $this->assertEquals(0, $result);
-        $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/RPMS/noarch/test-c-0.1-2.noarch.rpm'));
+        $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/RPMS/noarch/test-c-0.1-2.noarch.rpm');
         $this->assertTrue($packager->movePackage('/tmp/rpm-test/test-c-0.1.rpm'));
-        $this->assertTrue(file_exists('/tmp/rpm-test/test-c-0.1.rpm'));
-        $expected_files = array('/usr/bin/binary', '/usr/lib/test', '/usr/lib/test/abc');
-        exec('rpm -qlp ' . '/tmp/rpm-test/test-c-0.1.rpm', $actual_files, $_);
-        $this->assertEquals($expected_files, $actual_files);
+        $this->assertFileExists('/tmp/rpm-test/test-c-0.1.rpm');
+
+        $expectedFiles = ['/opt/test/binary', '/opt/test/lib', '/opt/test/lib/abc'];
+        exec('rpm -qlp ' . '/tmp/rpm-test/test-c-0.1.rpm', $actualFiles, $_);
+        $this->assertEquals($expectedFiles, $actualFiles);
 
         unlink('/tmp/rpm-test/test-c-0.1.rpm');
         unlink($packager->getBuildPath() . '/rpmbuild/SPECS/test-c.spec');
@@ -88,7 +94,9 @@ class PackagerTest extends PHPUnit\Framework\TestCase
         touch('/tmp/rpm-test/package/test2/abc');
 
         $spec = new Spec();
-        $spec->setBlock('prep', '%autosetup -c package')->setProp('Name', 'test-s');
+        $spec
+            ->setBlock('prep', '%autosetup -c package')
+            ->setProp('Name', 'test-s');
         $packager = new Packager();
         $packager->setSpec($spec);
         $packager->setOutputPath('/tmp/rpm-test/output');
@@ -97,30 +105,32 @@ class PackagerTest extends PHPUnit\Framework\TestCase
 
         $this->assertEquals('%autosetup -c package', $spec->prep);
         $this->assertEquals("rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n", $spec->install);
-        $this->assertEquals('/usr/share/test', $spec->files);
-        $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SPECS/test-s.spec'));
-        $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SOURCES/test-s.tar'));
+        $this->assertEquals("/usr/share/test\n", $spec->files);
+        $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/SPECS/test-s.spec');
+        $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/SOURCES/test-s.tar');
 
         $phar = new PharData($packager->getBuildPath() . '/rpmbuild/SOURCES/test-s.tar');
-        $this->assertTrue(isset($phar['usr/share/test/test/binary']));
-        $this->assertTrue(isset($phar['usr/share/test/test2/abc']));
+        $this->assertArrayHasKey('usr/share/test/test/binary', $phar);
+        $this->assertArrayHasKey('usr/share/test/test2/abc', $phar);
 
         $command = $packager->build();
         $this->assertEquals('rpmbuild -bb ' . $packager->getBuildPath() . '/rpmbuild/SPECS/test-s.spec', $command);
         exec($command, $_, $result);
+
         $this->assertEquals(0, $result);
-        $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/RPMS/noarch/test-s-0.1-1.noarch.rpm'));
+        $this->assertFileExists($packager->getBuildPath() . '/rpmbuild/RPMS/noarch/test-s-0.1-1.noarch.rpm');
         $this->assertTrue($packager->movePackage('/tmp/rpm-test/test-s-0.1.rpm'));
-        $this->assertTrue(file_exists('/tmp/rpm-test/test-s-0.1.rpm'));
-        $expected_files = [
+        $this->assertFileExists('/tmp/rpm-test/test-s-0.1.rpm');
+
+        $expectedFiles = [
             '/usr/share/test',
             '/usr/share/test/test',
             '/usr/share/test/test/binary',
             '/usr/share/test/test2',
             '/usr/share/test/test2/abc'
         ];
-        exec('rpm -qlp ' . '/tmp/rpm-test/test-s-0.1.rpm', $actual_files, $_);
-        $this->assertEquals($expected_files, $actual_files);
+        exec('rpm -qlp ' . '/tmp/rpm-test/test-s-0.1.rpm', $actualFiles, $_);
+        $this->assertEquals($expectedFiles, $actualFiles);
 
         unlink('/tmp/rpm-test/test-s-0.1.rpm');
         unlink($packager->getBuildPath() . '/rpmbuild/SPECS/test-s.spec');

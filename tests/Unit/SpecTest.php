@@ -8,7 +8,9 @@ class SpecTest extends PHPUnit\Framework\TestCase
         $spec = new Spec();
         $spec->setProp('Name','simplepackage')
             ->setProp('Version', '1.0.0')
-            ->setProp('Release', '1');
+            ->setProp('Release', '1')
+            ->setBlock('Description', 'My software description')
+            ->addPerm('/etc/sample-package/bin/index.php', 644);
         $this->assertEquals(<<<SPEC
 Name: simplepackage
 Version: 1.0.0
@@ -32,12 +34,15 @@ mkdir -p %{buildroot}
 cp -rp * %{buildroot}
 
 
-%files
-%defattr(644,root,root,755)
-
-
 %changelog
 
+
+%Description
+My software description
+
+%files
+%defattr(644,root,root,755)
+%attr(644,-,-) /etc/sample-package/bin/index.php
 
 SPEC
         , (string)$spec);
@@ -67,10 +72,13 @@ cp -p binary %{buildroot}%{_bindir}/binary
 cp -p src/* %{buildroot}%{_libdir}/%{name}/')
             ->setDefAttr(664, 'apache', 'apache', 775)
             ->addPerm('%{buildroot}%{bindir}/binary1', 644)
-            ->addPerm('%{buildroot}%{bindir}/binary2', 644,'apache')
+            ->addPerm('%{buildroot}%{bindir}/binary2')
             ->addPerm('%{buildroot}%{bindir}/binary3', 644,'apache', 'apache')
-            ->setBlock('files', '%{buildroot}%{bindir}/binary
-%{buildroot}%{_libdir}/%{name}/*')
+            ->addPerm('%{buildroot}%{bindir}/binary3')
+            ->addPerm('%{buildroot}%{bindir}/binary2', 644,'apache')
+            ->addPerm('%{buildroot}%{bindir}/binary1')
+            ->addPerm('%{buildroot}%{bindir}/binary')
+            ->addPerm('%{buildroot}%{_libdir}/%{name}/*')
             ->setBlock('changelog', '- 1.0.0.');
         $this->assertEquals(<<<SPEC
 Name: simplepackage
@@ -101,16 +109,16 @@ mkdir -p %{buildroot}%{_libdir}/%{name}
 cp -p binary %{buildroot}%{_bindir}/binary
 cp -p src/* %{buildroot}%{_libdir}/%{name}/
 
+%changelog
+- 1.0.0.
+
 %files
 %defattr(664,apache,apache,775)
-%{buildroot}%{bindir}/binary
-%{buildroot}%{_libdir}/%{name}/*
 %attr(644,-,-) %{buildroot}%{bindir}/binary1
 %attr(644,apache,-) %{buildroot}%{bindir}/binary2
 %attr(644,apache,apache) %{buildroot}%{bindir}/binary3
-
-%changelog
-- 1.0.0.
+%{buildroot}%{bindir}/binary
+%{buildroot}%{_libdir}/%{name}/*
 
 SPEC
         , (string)$spec);
