@@ -166,7 +166,7 @@ class Spec
     {
         $result = '';
         foreach ($this->blocks as $block => $value) {
-            $result .= "\n" . '%' . $block . "\n";
+            $result .= "\n%{$block}\n";
             if ($block === 'files') {
                 $result .= '%defattr(' . implode(',', $this->inlineBlocks['defattr']) . ")\n";
             }
