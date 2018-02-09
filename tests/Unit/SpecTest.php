@@ -64,11 +64,7 @@ SPEC
 Very long')
             ->setBlock('prep', '%autosetup -c package')
             ->setBlock('build', '')
-            ->setBlock('install', 'rm -rf %{buildroot}
-mkdir -p %{buildroot}%{_bindir}
-mkdir -p %{buildroot}%{_libdir}/%{name}
-cp -p binary %{buildroot}%{_bindir}/binary
-cp -p src/* %{buildroot}%{_libdir}/%{name}/')
+            ->setBlock('install', ['rm -rf %{buildroot}', 'mkdir -p %{buildroot}%{_bindir}', 'mkdir -p %{buildroot}%{_libdir}/%{name}', 'cp -p binary %{buildroot}%{_bindir}/binary'])
             ->setDefAttr(664, 'apache', 'apache', 775)
             ->addPerm('%{destroot}/%{bindir}/binary1', 644)
             ->addPerm('%{destroot}/%{bindir}/binary2')
@@ -79,6 +75,7 @@ cp -p src/* %{buildroot}%{_libdir}/%{name}/')
             ->addPerm('%{destroot}/%{bindir}/binary')
             ->addPerm('%{buildroot}/%{_libdir}/%{name}/*')
             ->addExclude('%{buildroot}/%{_libdir}/%{name}/[foo|bar]')
+            ->appendInstallCommand('cp -p src/* %{buildroot}%{_libdir}/%{name}/')
             ->setBlock('changelog', '- 1.0.0.')
             ->setDestinationFolder('/opt/project/')
         ;

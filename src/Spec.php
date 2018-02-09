@@ -135,7 +135,7 @@ class Spec
 
     public function appendInstallCommand(string $command): self
     {
-        $this->blocks['install'] = $command;
+        $this->blocks['install'][] = $command;
 
         return $this;
     }
@@ -188,11 +188,12 @@ class Spec
 
     /**
      * @param string $entity - /opt/myapp/[bin|data|whatever]
+     * @param bool   $isFolder
      * @return Spec
      */
-    public function addExclude(string $entity): self
+    public function addExclude(string $entity, $isFolder = false): self
     {
-        $this->inlineBlocks['exclude'][$entity] = $entity;
+        $this->inlineBlocks['exclude'][$entity] = $isFolder;
 
         return $this;
     }
@@ -227,8 +228,8 @@ class Spec
         foreach ((array)$this->inlineBlocks['files'] as $element) {
             $result .= \is_string($element) ? "$element\n" : "%attr({$element[1]},{$element[2]},{$element[3]}) {$element[0]}\n";
         }
-        foreach ((array)$this->inlineBlocks['exclude'] as $element) {
-            $result .= "%exclude $element\n";
+        foreach ((array)$this->inlineBlocks['exclude'] as $element => $isFolder) {
+            $result .= $isFolder ?  "%exclude %dir $element\n" : "%exclude $element\n";
         }
 
         return $this->replaceFolderMask($result);
