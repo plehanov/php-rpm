@@ -50,7 +50,7 @@ class PackagerTest extends PHPUnit\Framework\TestCase
 
         $this->assertEquals('%autosetup -c package', $spec->prep);
         $this->assertEquals("rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n", $spec->install);
-        $this->assertEquals("%attr(644,root,root) /usr/bin/binary\n/usr/lib/test/", $spec->files);
+        $this->assertEquals("/usr/bin/binary\n/usr/lib/test", $spec->files);
         $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SPECS/test-c.spec'));
         $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SOURCES/test-c.tar'));
 
@@ -97,7 +97,7 @@ class PackagerTest extends PHPUnit\Framework\TestCase
 
         $this->assertEquals('%autosetup -c package', $spec->prep);
         $this->assertEquals("rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n", $spec->install);
-        $this->assertEquals('/usr/share/test/', $spec->files);
+        $this->assertEquals('/usr/share/test', $spec->files);
         $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SPECS/test-s.spec'));
         $this->assertTrue(file_exists($packager->getBuildPath() . '/rpmbuild/SOURCES/test-s.tar'));
 

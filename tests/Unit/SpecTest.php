@@ -21,7 +21,7 @@ BuildArch: noarch
 
 
 %prep
-%autosetup
+%autosetup -c package
 
 %build
 

@@ -38,7 +38,7 @@ class Spec
 
     private $blocks = [
         'description' => '',
-        'prep' => '%autosetup',
+        'prep' => '%autosetup -c package',
         'build' => '',
         'install' => "rm -rf %{buildroot}\nmkdir -p %{buildroot}\ncp -rp * %{buildroot}\n",
         'files' => '',
@@ -97,11 +97,11 @@ class Spec
      * @param null $value
      * @return Spec
      */
-    public function setBlock($prop, $value = null): self
+    public function setBlock($prop, $value = ''): self
     {
         if (\is_array($prop)){
             $this->blocks = array_merge($this->blocks, $prop);
-        } elseif($value !== null) {
+        } elseif($value !== '') {
             $this->blocks[$prop] = $value;
         }
 

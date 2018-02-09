@@ -78,13 +78,7 @@ class Packager
             $this->pathToPath($sourcePath, $this->outputPath . $destPath);
         }
 
-        $files = null;
-        foreach ($this->mountPoints as $sourcePath => $destPath) {
-            $files .= "\n" . (is_dir($sourcePath) ? $destPath . '/'
-                : "%attr({$this->spec->defAttrMode()},{$this->spec->defAttrUser()},{$this->spec->defAttrGroup()}) {$destPath}");
-        }
-
-        $this->spec->setBlock('files', ltrim($files, "\n"));
+        $this->spec->setBlock('files', implode($this->mountPoints, "\n"));
 
         if (file_exists("{$this->buildPath}/rpmbuild/SOURCES/{$this->spec->Name}.tar")) {
             unlink("{$this->buildPath}/rpmbuild/SOURCES/{$this->spec->Name}.tar");
